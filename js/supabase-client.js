@@ -142,39 +142,55 @@ const DataManager = {
         }
     },
 
-    // Individual save functions
+    // Individual save functions - REMOVE ID FIELD TO LET SUPABASE GENERATE IT
     async savePeriods(periods) {
+        // Remove id field to let Supabase generate UUID
+        const periodsWithoutId = periods.map(({ id, ...period }) => period);
+        
         const { error } = await supabase
             .from(DB_SCHEMA.periods)
-            .upsert(periods);
+            .upsert(periodsWithoutId);
         if (error) throw error;
     },
 
     async saveSubjects(subjects) {
+        // Remove id field to let Supabase generate UUID
+        const subjectsWithoutId = subjects.map(({ id, ...subject }) => subject);
+        
         const { error } = await supabase
             .from(DB_SCHEMA.subjects)
-            .upsert(subjects);
+            .upsert(subjectsWithoutId);
         if (error) throw error;
     },
 
     async saveClasses(classes) {
+        // Remove id field to let Supabase generate UUID
+        const classesWithoutId = classes.map(({ id, ...cls }) => cls);
+        
         const { error } = await supabase
             .from(DB_SCHEMA.classes)
-            .upsert(classes);
+            .upsert(classesWithoutId);
         if (error) throw error;
     },
 
     async saveTeachers(teachers) {
+        // Remove id field to let Supabase generate UUID
+        const teachersWithoutId = teachers.map(({ id, ...teacher }) => teacher);
+        
         const { error } = await supabase
             .from(DB_SCHEMA.teachers)
-            .upsert(teachers);
+            .upsert(teachersWithoutId);
         if (error) throw error;
     },
 
     async saveConstraints(constraints) {
+        // For constraints, we need to keep the structure but ensure proper format
+        const constraintsToSave = { ...constraints };
+        delete constraintsToSave.id; // Remove id if present
+        
         const { error } = await supabase
             .from(DB_SCHEMA.constraints)
-            .upsert(constraints);
+            .upsert(constraintsToSave);
         if (error) throw error;
     },
 
@@ -184,7 +200,10 @@ const DataManager = {
         Object.keys(timetable).forEach(day => {
             Object.keys(timetable[day]).forEach(periodId => {
                 Object.keys(timetable[day][periodId]).forEach(classId => {
-                    entries.push(timetable[day][periodId][classId]);
+                    const entry = timetable[day][periodId][classId];
+                    // Remove id field to let Supabase generate UUID
+                    const { id, ...entryWithoutId } = entry;
+                    entries.push(entryWithoutId);
                 });
             });
         });
