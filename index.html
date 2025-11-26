@@ -802,7 +802,6 @@
                 max_lessons_per_subject: 10
             }
         };
-
         // DOM elements
         const pages = document.querySelectorAll('.page');
         const navLinks = document.querySelectorAll('.nav-link');
@@ -1110,7 +1109,7 @@
         // Period management functions
         function showPeriodModal(editId = null) {
             const modal = document.getElementById('period-modal');
-            
+
             if (editId) {
                 // Edit mode
                 const period = appState.periods.find(p => p.id === editId);
@@ -1129,7 +1128,7 @@
                 document.getElementById('modal-period-type').value = 'lesson';
                 document.getElementById('save-period').removeAttribute('data-edit-id');
             }
-            
+
             modal.style.display = 'flex';
         }
 
@@ -1143,7 +1142,7 @@
             const end = document.getElementById('modal-period-end').value;
             const type = document.getElementById('modal-period-type').value;
             const editId = document.getElementById('save-period').getAttribute('data-edit-id');
-            
+
             if (name && start && end) {
                 if (editId) {
                     // Update existing period
@@ -1169,7 +1168,7 @@
                     };
                     appState.periods.push(newPeriod);
                 }
-                
+
                 updatePeriodsList();
                 saveAppData();
                 hidePeriodModal();
@@ -1217,7 +1216,7 @@
         // Subject management functions
         function showSubjectModal(editId = null) {
             const modal = document.getElementById('subject-modal');
-            
+
             if (editId) {
                 // Edit mode
                 const subject = appState.subjects.find(s => s.id === editId);
@@ -1236,7 +1235,7 @@
                 document.getElementById('modal-subject-priority').value = 'medium';
                 document.getElementById('save-subject').removeAttribute('data-edit-id');
             }
-            
+
             modal.style.display = 'flex';
         }
 
@@ -1250,7 +1249,7 @@
             const lessons = parseInt(document.getElementById('modal-subject-lessons').value);
             const priority = document.getElementById('modal-subject-priority').value;
             const editId = document.getElementById('save-subject').getAttribute('data-edit-id');
-            
+
             if (name && lessons) {
                 if (editId) {
                     // Update existing subject
@@ -1276,7 +1275,7 @@
                     };
                     appState.subjects.push(newSubject);
                 }
-                
+
                 updateSubjectsList();
                 saveAppData();
                 hideSubjectModal();
@@ -1319,7 +1318,7 @@
         // Class management functions
         function showClassModal(editId = null) {
             const modal = document.getElementById('class-modal');
-            
+
             if (editId) {
                 // Edit mode
                 const cls = appState.classes.find(c => c.id === editId);
@@ -1336,7 +1335,7 @@
                 document.getElementById('modal-class-students').value = '';
                 document.getElementById('save-class').removeAttribute('data-edit-id');
             }
-            
+
             modal.style.display = 'flex';
         }
 
@@ -1347,10 +1346,10 @@
         function saveClass() {
             const level = document.getElementById('modal-class-level').value;
             const stream = document.getElementById('modal-class-stream').value;
-            const students = document.getElementById('modal-class-students').value ? 
+            const students = document.getElementById('modal-class-students').value ?
                 parseInt(document.getElementById('modal-class-students').value) : null;
             const editId = document.getElementById('save-class').getAttribute('data-edit-id');
-            
+
             if (level && stream) {
                 if (editId) {
                     // Update existing class
@@ -1374,7 +1373,7 @@
                     };
                     appState.classes.push(newClass);
                 }
-                
+
                 updateClassesList();
                 saveAppData();
                 hideClassModal();
@@ -1418,7 +1417,7 @@
         function showTeacherModal(editId = null) {
             const modal = document.getElementById('teacher-modal');
             const subjectsSelect = document.getElementById('modal-teacher-subjects');
-            
+
             // Populate subjects dropdown
             subjectsSelect.innerHTML = '';
             appState.subjects.forEach(subject => {
@@ -1427,20 +1426,20 @@
                 option.textContent = subject.name;
                 subjectsSelect.appendChild(option);
             });
-            
+
             if (editId) {
                 // Edit mode
                 const teacher = appState.teachers.find(t => t.id === editId);
                 if (teacher) {
                     document.getElementById('modal-teacher-name').value = teacher.name;
-                    
+
                     // Set selected subjects
                     if (teacher.subjects) {
                         Array.from(subjectsSelect.options).forEach(option => {
                             option.selected = teacher.subjects.includes(option.value);
                         });
                     }
-                    
+
                     // Set selected class levels
                     const levelsSelect = document.getElementById('modal-teacher-levels');
                     if (teacher.class_levels) {
@@ -1448,7 +1447,7 @@
                             option.selected = teacher.class_levels.includes(option.value);
                         });
                     }
-                    
+
                     document.getElementById('save-teacher').setAttribute('data-edit-id', editId);
                 }
             } else {
@@ -1463,7 +1462,7 @@
                 });
                 document.getElementById('save-teacher').removeAttribute('data-edit-id');
             }
-            
+
             modal.style.display = 'flex';
         }
 
@@ -1475,11 +1474,11 @@
             const name = document.getElementById('modal-teacher-name').value;
             const subjectsSelect = document.getElementById('modal-teacher-subjects');
             const levelsSelect = document.getElementById('modal-teacher-levels');
-            
+
             const selectedSubjects = Array.from(subjectsSelect.selectedOptions).map(option => option.value);
             const selectedLevels = Array.from(levelsSelect.selectedOptions).map(option => option.value);
             const editId = document.getElementById('save-teacher').getAttribute('data-edit-id');
-            
+
             if (name && selectedSubjects.length > 0 && selectedLevels.length > 0) {
                 if (editId) {
                     // Update existing teacher
@@ -1505,7 +1504,7 @@
                     };
                     appState.teachers.push(newTeacher);
                 }
-                
+
                 updateTeachersList();
                 saveAppData();
                 hideTeacherModal();
@@ -1525,10 +1524,10 @@
                     const subject = appState.subjects.find(s => s.id === subjectId);
                     return subject ? subject.name : 'Unknown';
                 }).join(', ') : '';
-                
+
                 // Get class levels
                 const classLevels = teacher.class_levels ? teacher.class_levels.join(', ') : '';
-                
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${teacher.name}</td>
