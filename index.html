@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Timetable Generator</title>
+    <!-- In the head section, add -->
+    <script type="module" src="js/supabase-client.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/timetable.js"></script>
+    <script type="module" src="js/constraints.js"></script>
+    <script type="module" src="js/export.js"></script>
+
+    <!-- Add progress indicator in timetable page -->
+    <div class="generation-progress" id="generation-progress" style="display: none;">
+        Generating timetable... 0%
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fb;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 1.5rem;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        nav ul li a:hover,
+        nav ul li a.active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        main {
+            padding: 2rem 0;
+            min-height: calc(100vh - 140px);
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .timetable {
+            display: grid;
+            grid-template-columns: 100px repeat(5, 1fr);
+            gap: 1px;
+            background-color: #dee2e6;
+            border: 1px solid #dee2e6;
+        }
+
+        .timetable-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .timetable-cell {
+            background-color: white;
+            padding: 0.75rem;
+            min-height: 80px;
+        }
+
+        .period-cell {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .break-cell {
+            background-color: #ffeaa7;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .lesson {
+            background-color: #e3f2fd;
+            border-left: 4px solid var(--primary);
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .lesson:hover {
+            background-color: #bbdefb;
+            cursor: pointer;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background-color: #d1f2eb;
+            color: #0e6251;
+            border-left: 4px solid #28b463;
+        }
+
+        .alert-warning {
+            background-color: #fdebd0;
+            color: #7e5109;
+            border-left: 4px solid #f39c12;
+        }
+
+        .alert-error {
+            background-color: #fadbd8;
+            color: #78281f;
+            border-left: 4px solid #e74c3c;
+        }
+
+        footer {
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 0;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: var(--gray);
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            nav ul {
+                margin-top: 1rem;
+                justify-content: center;
+            }
+
+            nav ul li {
+                margin: 0 0.5rem;
+            }
+
+            .timetable {
+                grid-template-columns: 60px repeat(5, 1fr);
+            }
+
+            .timetable-cell {
+                padding: 0.5rem;
+                min-height: 60px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">Timetable Generator</div>
+                <nav>
+                    <ul>
+                        <li><a href="#" class="nav-link active" data-page="dashboard">Dashboard</a></li>
+                        <li><a href="#" class="nav-link" data-page="setup">Setup</a></li>
+                        <li><a href="#" class="nav-link" data-page="timetable">Timetable</a></li>
+                        <li><a href="#" class="nav-link" data-page="export">Export</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- Dashboard Page -->
+            <div id="dashboard" class="page active">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Dashboard</h2>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="teachers-count">0</div>
+                            <div class="stat-label">Teachers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="subjects-count">0</div>
+                            <div class="stat-label">Subjects</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="classes-count">0</div>
+                            <div class="stat-label">Classes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="periods-count">0</div>
+                            <div class="stat-label">Periods</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Quick Actions</h2>
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn" id="generate-timetable">Generate Timetable</button>
+                        <button class="btn btn-success" id="export-all">Export All</button>
+                        <button class="btn" id="add-teacher">Add Teacher</button>
+                        <button class="btn" id="add-subject">Add Subject</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Activity</h2>
+                    </div>
+                    <div id="recent-activity">
+                        <p>No recent activity. Start by setting up your school data.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Page -->
+            <div id="setup" class="page">
+                <div class="tabs">
+                    <div class="tab active" data-tab="periods">Periods</div>
+                    <div class="tab" data-tab="subjects">Subjects</div>
+                    <div class="tab" data-tab="classes">Classes</div>
+                    <div class="tab" data-tab="teachers">Teachers</div>
+                    <div class="tab" data-tab="constraints">Constraints</div>
+                </div>
+
+                <!-- Periods Tab -->
+                <div id="periods-tab" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">School Periods</h2>
+                            <button class="btn" id="add-period">Add Period</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="school-day-start">School Day Start Time</label>
+                            <input type="time" id="school-day-start" value="08:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="school-day-end">School Day End Time</label>
+                            <input type="time" id="school-day-end" value="15:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="period-duration">Period Duration (minutes)</label>
+                            <input type="number" id="period-duration" value="45" min="15" max="120">
+                        </div>
+
+                        <h3 style="margin: 1.5rem 0 1rem;">Periods & Breaks</h3>
+                        <table id="periods-table">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="periods-list">
+                                <!-- Periods will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Subjects Tab -->
+                <div id="subjects-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Subjects</h2>
+                            <button class="btn" id="add-subject-btn">Add Subject</button>
+                        </div>
+                        <table id="subjects-table">
+                            <thead>
+                                <tr>
+                                    <th>Subject Name</th>
+                                    <th>Code</th>
+                                    <th>Priority</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subjects-list">
+                                <!-- Subjects will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Classes Tab -->
+                <div id="classes-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Classes & Streams</h2>
+                            <button class="btn" id="add-class-btn">Add Class</button>
+                        </div>
+                        <table id="classes-table">
+                            <thead>
+                                <tr>
+                                    <th>Class Level</th>
+                                    <th>Stream Name</th>
+                                    <th>Number of Students</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classes-list">
+                                <!-- Classes will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Teachers Tab -->
+                <div id="teachers-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Teachers</h2>
+                            <button class="btn" id="add-teacher-btn">Add Teacher</button>
+                        </div>
+                        <table id="teachers-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Subjects</th>
+                                    <th>Classes</th>
+                                    <th>Availability</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teachers-list">
+                                <!-- Teachers will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Constraints Tab -->
+                <div id="constraints-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Constraints & Preferences</h2>
+                        </div>
+                        <div class="form-group">
+                            <label for="max-daily-lessons">Maximum Daily Lessons per Teacher</label>
+                            <input type="number" id="max-daily-lessons" value="6" min="1" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="max-weekly-lessons">Maximum Weekly Lessons per Teacher</label>
+                            <input type="number" id="max-weekly-lessons" value="25" min="10" max="40">
+                        </div>
+                        <div class="form-group">
+                            <label for="prefer-morning">Prefer Morning Periods for Core Subjects</label>
+                            <input type="checkbox" id="prefer-morning" checked>
+                        </div>
+                        <div class="form-group">
+                            <label for="balance-workload">Balance Teacher Workload</label>
+                            <input type="checkbox" id="balance-workload" checked>
+                        </div>
+                        <button class="btn" id="save-constraints">Save Constraints</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timetable Page -->
+            <div id="timetable" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Timetable</h2>
+                        <div>
+                            <select id="timetable-view">
+                                <option value="class">Class View</option>
+                                <option value="teacher">Teacher View</option>
+                                <option value="room">Room View</option>
+                            </select>
+                            <select id="timetable-entity">
+                                <option value="all">All</option>
+                            </select>
+                            <button class="btn" id="generate-btn">Generate</button>
+                            <button class="btn btn-success" id="save-timetable">Save</button>
+                        </div>
+                    </div>
+
+                    <div id="timetable-container">
+                        <!-- Timetable will be generated here -->
+                        <div class="alert alert-warning">
+                            No timetable generated yet. Click "Generate" to create one.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Manual Edit</h2>
+                    </div>
+                    <div id="edit-controls">
+                        <p>Select a lesson in the timetable to edit it.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Page -->
+            <div id="export" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Export Timetables</h2>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-format">Export Format</label>
+                        <select id="export-format">
+                            <option value="excel">Excel (.xlsx)</option>
+                            <option value="word">Word (.docx)</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-type">Export For</label>
+                        <select id="export-type">
+                            <option value="teachers">All Teachers</option>
+                            <option value="classes">All Classes</option>
+                            <option value="streams">All Streams</option>
+                            <option value="selected">Selected Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="export-selection" style="display: none;">
+                        <label>Select Items to Export</label>
+                        <div id="export-options">
+                            <!-- Options will be populated here -->
+                        </div>
+                    </div>
+                    <button class="btn btn-success" id="export-btn">Export</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Export History</h2>
+                    </div>
+                    <table id="export-history">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Format</th>
+                                <th>Download</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Export history will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; School Timetable Generator. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div id="period-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px;">
+            <h3>Add/Edit Period</h3>
+            <div class="form-group">
+                <label for="modal-period-name">Period Name</label>
+                <input type="text" id="modal-period-name">
+            </div>
+            <div class="form-group">
+                <label for="modal-period-start">Start Time</label>
+                <input type="time" id="modal-period-start">
+            </div>
+            <div class="form-group">
+                <label for="modal-period-end">End Time</label>
+                <input type="time" id="modal-period-end">
+            </div>
+            <div class="form-group">
+                <label for="modal-period-type">Period Type</label>
+                <select id="modal-period-type">
+                    <option value="lesson">Lesson</option>
+                    <option value="break">Break</option>
+                    <option value="lunch">Lunch</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-period">Cancel</button>
+                <button class="btn btn-success" id="save-period">Save</button>
+            </div>
+        </div>
+    </div>
+    <!-- Subject Modal -->
+    <div id="subject-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px;">
+            <h3>Add/Edit Subject</h3>
+            <div class="form-group">
+                <label for="modal-subject-name">Subject Name</label>
+                <input type="text" id="modal-subject-name">
+            </div>
+            <div class="form-group">
+                <label for="modal-subject-code">Subject Code</label>
+                <input type="text" id="modal-subject-code">
+            </div>
+            <div class="form-group">
+                <label for="modal-subject-lessons">Target Lessons per Week</label>
+                <input type="number" id="modal-subject-lessons" value="5" min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label for="modal-subject-priority">Priority</label>
+                <select id="modal-subject-priority">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-subject">Cancel</button>
+                <button class="btn btn-success" id="save-subject">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Modal -->
+    <div id="class-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px;">
+            <h3>Add/Edit Class</h3>
+            <div class="form-group">
+                <label for="modal-class-level">Class Level</label>
+                <input type="text" id="modal-class-level" placeholder="e.g., S.1, S.2, S.3">
+            </div>
+            <div class="form-group">
+                <label for="modal-class-stream">Stream Name</label>
+                <input type="text" id="modal-class-stream" placeholder="e.g., North, South, East, West">
+            </div>
+            <div class="form-group">
+                <label for="modal-class-students">Number of Students</label>
+                <input type="number" id="modal-class-students" min="1" max="100">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-class">Cancel</button>
+                <button class="btn btn-success" id="save-class">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Modal -->
+    <div id="teacher-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px;">
+            <h3>Add/Edit Teacher</h3>
+            <div class="form-group">
+                <label for="modal-teacher-name">Teacher Name</label>
+                <input type="text" id="modal-teacher-name">
+            </div>
+            <div class="form-group">
+                <label for="modal-teacher-subjects">Subjects (select multiple)</label>
+                <select id="modal-teacher-subjects" multiple style="height: 120px;">
+                    <!-- Subjects will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="modal-teacher-levels">Class Levels (select multiple)</label>
+                <select id="modal-teacher-levels" multiple style="height: 100px;">
+                    <option value="S.1">S.1</option>
+                    <option value="S.2">S.2</option>
+                    <option value="S.3">S.3</option>
+                    <option value="S.4">S.4</option>
+                    <option value="S.5">S.5</option>
+                    <option value="S.6">S.6</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-teacher">Cancel</button>
+                <button class="btn btn-success" id="save-teacher">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Supabase configuration
+    const SUPABASE_URL = 'https://your-project.supabase.co';
+    const SUPABASE_ANON_KEY = 'your-anon-key';
+
+    // Initialize Supabase client
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Application state
+    let appState = {
+        periods: [],
+        subjects: [],
+        classes: [],
+        teachers: [],
+        timetable: {},
+        constraints: {
+            maxDailyLessons: 6,
+            maxWeeklyLessons: 25,
+            preferMorning: true,
+            balanceWorkload: true
+        }
+    };
+
+    // DOM elements
+    const pages = document.querySelectorAll('.page');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load data from localStorage or Supabase
+        loadAppData();
+
+        // Set up event listeners
+        setupEventListeners();
+
+        // Update dashboard stats
+        updateDashboardStats();
+    });
+
+    // Set up all event listeners
+    function setupEventListeners() {
+        // Navigation
+        navLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const pageId = this.getAttribute('data-page');
+                showPage(pageId);
+
+                // Update active nav link
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Tabs
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function () {
+                const tabId = this.getAttribute('data-tab');
+                showTab(tabId);
+
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Periods
+        document.getElementById('add-period').addEventListener('click', () => showPeriodModal());
+        document.getElementById('save-period').addEventListener('click', savePeriod);
+        document.getElementById('cancel-period').addEventListener('click', hidePeriodModal);
+
+        // Subjects
+        document.getElementById('add-subject-btn').addEventListener('click', () => showSubjectModal());
+        document.getElementById('save-subject').addEventListener('click', saveSubject);
+        document.getElementById('cancel-subject').addEventListener('click', hideSubjectModal);
+
+        // Classes
+        document.getElementById('add-class-btn').addEventListener('click', () => showClassModal());
+        document.getElementById('save-class').addEventListener('click', saveClass);
+        document.getElementById('cancel-class').addEventListener('click', hideClassModal);
+
+        // Teachers
+        document.getElementById('add-teacher-btn').addEventListener('click', () => showTeacherModal());
+        document.getElementById('save-teacher').addEventListener('click', saveTeacher);
+        document.getElementById('cancel-teacher').addEventListener('click', hideTeacherModal);
+
+        // Constraints
+        document.getElementById('save-constraints').addEventListener('click', saveConstraints);
+
+        // Timetable
+        document.getElementById('generate-btn').addEventListener('click', generateTimetable);
+        document.getElementById('save-timetable').addEventListener('click', saveTimetable);
+
+        // Export
+        document.getElementById('export-type').addEventListener('change', toggleExportSelection);
+        document.getElementById('export-btn').addEventListener('click', exportTimetables);
+
+        // Quick actions
+        document.getElementById('generate-timetable').addEventListener('click', function () {
+            showPage('timetable');
+            document.querySelector('.nav-link[data-page="timetable"]').click();
+        });
+
+        document.getElementById('export-all').addEventListener('click', function () {
+            showPage('export');
+            document.querySelector('.nav-link[data-page="export"]').click();
+        });
+
+        document.getElementById('add-teacher').addEventListener('click', function () {
+            showPage('setup');
+            document.querySelector('.nav-link[data-page="setup"]').click();
+            document.querySelector('.tab[data-tab="teachers"]').click();
+            showTeacherModal();
+        });
+
+        document.getElementById('add-subject').addEventListener('click', function () {
+            showPage('setup');
+            document.querySelector('.nav-link[data-page="setup"]').click();
+            document.querySelector('.tab[data-tab="subjects"]').click();
+            showSubjectModal();
+        });
+    }
+
+    // Show a specific page
+    function showPage(pageId) {
+        pages.forEach(page => {
+            page.classList.remove('active');
+        });
+        document.getElementById(pageId).classList.add('active');
+    }
+
+    // Show a specific tab
+    function showTab(tabId) {
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+    }
+
+    // Load application data
+    async function loadAppData() {
+        // Try to load from localStorage first
+        const savedData = localStorage.getItem('timetableData');
+        if (savedData) {
+            appState = JSON.parse(savedData);
+        } else {
+            // Try to load from Supabase
+            await loadFromSupabase();
+        }
+
+        // Update UI with loaded data
+        updatePeriodsList();
+        updateSubjectsList();
+        updateClassesList();
+        updateTeachersList();
+        updateConstraintsForm();
+    }
+
+    // Load data from Supabase
+    async function loadFromSupabase() {
+        try {
+            // Load periods
+            const { data: periods, error: periodsError } = await supabase
+                .from('periods')
+                .select('*');
+
+            if (!periodsError && periods) {
+                appState.periods = periods;
+            }
+
+            // Load subjects
+            const { data: subjects, error: subjectsError } = await supabase
+                .from('subjects')
+                .select('*');
+
+            if (!subjectsError && subjects) {
+                appState.subjects = subjects;
+            }
+
+            // Load classes
+            const { data: classes, error: classesError } = await supabase
+                .from('classes')
+                .select('*');
+
+            if (!classesError && classes) {
+                appState.classes = classes;
+            }
+
+            // Load teachers
+            const { data: teachers, error: teachersError } = await supabase
+                .from('teachers')
+                .select('*');
+
+            if (!teachersError && teachers) {
+                appState.teachers = teachers;
+            }
+
+            // Load constraints
+            const { data: constraints, error: constraintsError } = await supabase
+                .from('constraints')
+                .select('*')
+                .single();
+
+            if (!constraintsError && constraints) {
+                appState.constraints = constraints;
+            }
+
+            // Load timetable
+            const { data: timetable, error: timetableError } = await supabase
+                .from('timetable')
+                .select('*');
+
+            if (!timetableError && timetable) {
+                appState.timetable = timetable;
+            }
+
+        } catch (error) {
+            console.error('Error loading data from Supabase:', error);
+        }
+    }
+
+    // Save application data
+    async function saveAppData() {
+        // Save to localStorage
+        localStorage.setItem('timetableData', JSON.stringify(appState));
+
+        // Save to Supabase if configured
+        if (SUPABASE_URL !== 'https://your-project.supabase.co') {
+            await saveToSupabase();
+        }
+    }
+
+    // Save data to Supabase
+    async function saveToSupabase() {
+        try {
+            // Save periods
+            const { error: periodsError } = await supabase
+                .from('periods')
+                .upsert(appState.periods);
+
+            if (periodsError) {
+                console.error('Error saving periods:', periodsError);
+            }
+
+            // Save subjects
+            const { error: subjectsError } = await supabase
+                .from('subjects')
+                .upsert(appState.subjects);
+
+            if (subjectsError) {
+                console.error('Error saving subjects:', subjectsError);
+            }
+
+            // Save classes
+            const { error: classesError } = await supabase
+                .from('classes')
+                .upsert(appState.classes);
+
+            if (classesError) {
+                console.error('Error saving classes:', classesError);
+            }
+
+            // Save teachers
+            const { error: teachersError } = await supabase
+                .from('teachers')
+                .upsert(appState.teachers);
+
+            if (teachersError) {
+                console.error('Error saving teachers:', teachersError);
+            }
+
+            // Save constraints
+            const { error: constraintsError } = await supabase
+                .from('constraints')
+                .upsert(appState.constraints);
+
+            if (constraintsError) {
+                console.error('Error saving constraints:', constraintsError);
+            }
+
+            // Save timetable
+            const { error: timetableError } = await supabase
+                .from('timetable')
+                .upsert(appState.timetable);
+
+            if (timetableError) {
+                console.error('Error saving timetable:', timetableError);
+            }
+
+        } catch (error) {
+            console.error('Error saving data to Supabase:', error);
+        }
+    }
+
+    // Update dashboard statistics
+    function updateDashboardStats() {
+        document.getElementById('teachers-count').textContent = appState.teachers.length;
+        document.getElementById('subjects-count').textContent = appState.subjects.length;
+        document.getElementById('classes-count').textContent = appState.classes.length;
+        document.getElementById('periods-count').textContent = appState.periods.length;
+    }
+
+    // Period management functions
+    function showPeriodModal(editId = null) {
+        const modal = document.getElementById('period-modal');
+        
+        if (editId) {
+            // Edit mode
+            const period = appState.periods.find(p => p.id === editId);
+            if (period) {
+                document.getElementById('modal-period-name').value = period.name;
+                document.getElementById('modal-period-start').value = period.start_time || period.start;
+                document.getElementById('modal-period-end').value = period.end_time || period.end;
+                document.getElementById('modal-period-type').value = period.type;
+                document.getElementById('save-period').setAttribute('data-edit-id', editId);
+            }
+        } else {
+            // Add mode
+            document.getElementById('modal-period-name').value = '';
+            document.getElementById('modal-period-start').value = '';
+            document.getElementById('modal-period-end').value = '';
+            document.getElementById('modal-period-type').value = 'lesson';
+            document.getElementById('save-period').removeAttribute('data-edit-id');
+        }
+        
+        modal.style.display = 'flex';
+    }
+
+    function hidePeriodModal() {
+        document.getElementById('period-modal').style.display = 'none';
+    }
+
+    function savePeriod() {
+        const name = document.getElementById('modal-period-name').value;
+        const start = document.getElementById('modal-period-start').value;
+        const end = document.getElementById('modal-period-end').value;
+        const type = document.getElementById('modal-period-type').value;
+        const editId = document.getElementById('save-period').getAttribute('data-edit-id');
+        
+        if (name && start && end) {
+            if (editId) {
+                // Update existing period
+                const periodIndex = appState.periods.findIndex(p => p.id === editId);
+                if (periodIndex !== -1) {
+                    appState.periods[periodIndex] = {
+                        ...appState.periods[periodIndex],
+                        name,
+                        start_time: start,
+                        end_time: end,
+                        type
+                    };
+                }
+            } else {
+                // Create new period
+                const newPeriod = {
+                    id: Date.now().toString(),
+                    name,
+                    start_time: start,
+                    end_time: end,
+                    type,
+                    created_at: new Date().toISOString()
+                };
+                appState.periods.push(newPeriod);
+            }
+            
+            updatePeriodsList();
+            saveAppData();
+            hidePeriodModal();
+            updateDashboardStats();
+        } else {
+            alert('Please fill in all fields');
+        }
+    }
+
+    function updatePeriodsList() {
+        const periodsList = document.getElementById('periods-list');
+        periodsList.innerHTML = '';
+
+        appState.periods.forEach(period => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${period.name}</td>
+                <td>${period.start_time || period.start}</td>
+                <td>${period.end_time || period.end}</td>
+                <td>${period.type}</td>
+                <td>
+                    <button class="btn" onclick="editPeriod('${period.id}')">Edit</button>
+                    <button class="btn btn-warning" onclick="deletePeriod('${period.id}')">Delete</button>
+                </td>
+            `;
+            periodsList.appendChild(row);
+        });
+
+        updateDashboardStats();
+    }
+
+    function editPeriod(id) {
+        showPeriodModal(id);
+    }
+
+    function deletePeriod(id) {
+        if (confirm('Are you sure you want to delete this period?')) {
+            appState.periods = appState.periods.filter(p => p.id !== id);
+            updatePeriodsList();
+            saveAppData();
+            updateDashboardStats();
+        }
+    }
+
+    // Subject management functions
+    function showSubjectModal(editId = null) {
+        const modal = document.getElementById('subject-modal');
+        
+        if (editId) {
+            // Edit mode
+            const subject = appState.subjects.find(s => s.id === editId);
+            if (subject) {
+                document.getElementById('modal-subject-name').value = subject.name;
+                document.getElementById('modal-subject-code').value = subject.code || '';
+                document.getElementById('modal-subject-lessons').value = subject.target_lessons_per_week || 5;
+                document.getElementById('modal-subject-priority').value = subject.priority || 'medium';
+                document.getElementById('save-subject').setAttribute('data-edit-id', editId);
+            }
+        } else {
+            // Add mode
+            document.getElementById('modal-subject-name').value = '';
+            document.getElementById('modal-subject-code').value = '';
+            document.getElementById('modal-subject-lessons').value = 5;
+            document.getElementById('modal-subject-priority').value = 'medium';
+            document.getElementById('save-subject').removeAttribute('data-edit-id');
+        }
+        
+        modal.style.display = 'flex';
+    }
+
+    function hideSubjectModal() {
+        document.getElementById('subject-modal').style.display = 'none';
+    }
+
+    function saveSubject() {
+        const name = document.getElementById('modal-subject-name').value;
+        const code = document.getElementById('modal-subject-code').value;
+        const lessons = parseInt(document.getElementById('modal-subject-lessons').value);
+        const priority = document.getElementById('modal-subject-priority').value;
+        const editId = document.getElementById('save-subject').getAttribute('data-edit-id');
+        
+        if (name && lessons) {
+            if (editId) {
+                // Update existing subject
+                const subjectIndex = appState.subjects.findIndex(s => s.id === editId);
+                if (subjectIndex !== -1) {
+                    appState.subjects[subjectIndex] = {
+                        ...appState.subjects[subjectIndex],
+                        name,
+                        code,
+                        target_lessons_per_week: lessons,
+                        priority
+                    };
+                }
+            } else {
+                // Create new subject
+                const newSubject = {
+                    id: Date.now().toString(),
+                    name,
+                    code,
+                    target_lessons_per_week: lessons,
+                    priority,
+                    created_at: new Date().toISOString()
+                };
+                appState.subjects.push(newSubject);
+            }
+            
+            updateSubjectsList();
+            saveAppData();
+            hideSubjectModal();
+            updateDashboardStats();
+        } else {
+            alert('Please fill in all required fields');
+        }
+    }
+
+    function updateSubjectsList() {
+        const subjectsList = document.getElementById('subjects-list');
+        subjectsList.innerHTML = '';
+
+        appState.subjects.forEach(subject => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${subject.name}</td>
+                <td>${subject.code || ''}</td>
+                <td>${subject.priority || 'medium'}</td>
+                <td>
+                    <button class="btn" onclick="showSubjectModal('${subject.id}')">Edit</button>
+                    <button class="btn btn-warning" onclick="deleteSubject('${subject.id}')">Delete</button>
+                </td>
+            `;
+            subjectsList.appendChild(row);
+        });
+
+        updateDashboardStats();
+    }
+
+    function deleteSubject(id) {
+        if (confirm('Are you sure you want to delete this subject?')) {
+            appState.subjects = appState.subjects.filter(s => s.id !== id);
+            updateSubjectsList();
+            saveAppData();
+            updateDashboardStats();
+        }
+    }
+
+    // Class management functions
+    function showClassModal(editId = null) {
+        const modal = document.getElementById('class-modal');
+        
+        if (editId) {
+            // Edit mode
+            const cls = appState.classes.find(c => c.id === editId);
+            if (cls) {
+                document.getElementById('modal-class-level').value = cls.level;
+                document.getElementById('modal-class-stream').value = cls.stream;
+                document.getElementById('modal-class-students').value = cls.student_count || '';
+                document.getElementById('save-class').setAttribute('data-edit-id', editId);
+            }
+        } else {
+            // Add mode
+            document.getElementById('modal-class-level').value = '';
+            document.getElementById('modal-class-stream').value = '';
+            document.getElementById('modal-class-students').value = '';
+            document.getElementById('save-class').removeAttribute('data-edit-id');
+        }
+        
+        modal.style.display = 'flex';
+    }
+
+    function hideClassModal() {
+        document.getElementById('class-modal').style.display = 'none';
+    }
+
+    function saveClass() {
+        const level = document.getElementById('modal-class-level').value;
+        const stream = document.getElementById('modal-class-stream').value;
+        const students = document.getElementById('modal-class-students').value ? 
+            parseInt(document.getElementById('modal-class-students').value) : null;
+        const editId = document.getElementById('save-class').getAttribute('data-edit-id');
+        
+        if (level && stream) {
+            if (editId) {
+                // Update existing class
+                const classIndex = appState.classes.findIndex(c => c.id === editId);
+                if (classIndex !== -1) {
+                    appState.classes[classIndex] = {
+                        ...appState.classes[classIndex],
+                        level,
+                        stream,
+                        student_count: students
+                    };
+                }
+            } else {
+                // Create new class
+                const newClass = {
+                    id: Date.now().toString(),
+                    level,
+                    stream,
+                    student_count: students,
+                    created_at: new Date().toISOString()
+                };
+                appState.classes.push(newClass);
+            }
+            
+            updateClassesList();
+            saveAppData();
+            hideClassModal();
+            updateDashboardStats();
+        } else {
+            alert('Please fill in all required fields');
+        }
+    }
+
+    function updateClassesList() {
+        const classesList = document.getElementById('classes-list');
+        classesList.innerHTML = '';
+
+        appState.classes.forEach(cls => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${cls.level}</td>
+                <td>${cls.stream}</td>
+                <td>${cls.student_count || 'N/A'}</td>
+                <td>
+                    <button class="btn" onclick="showClassModal('${cls.id}')">Edit</button>
+                    <button class="btn btn-warning" onclick="deleteClass('${cls.id}')">Delete</button>
+                </td>
+            `;
+            classesList.appendChild(row);
+        });
+
+        updateDashboardStats();
+    }
+
+    function deleteClass(id) {
+        if (confirm('Are you sure you want to delete this class?')) {
+            appState.classes = appState.classes.filter(c => c.id !== id);
+            updateClassesList();
+            saveAppData();
+            updateDashboardStats();
+        }
+    }
+
+    // Teacher management functions
+    function showTeacherModal(editId = null) {
+        const modal = document.getElementById('teacher-modal');
+        const subjectsSelect = document.getElementById('modal-teacher-subjects');
+        
+        // Populate subjects dropdown
+        subjectsSelect.innerHTML = '';
+        appState.subjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.id;
+            option.textContent = subject.name;
+            subjectsSelect.appendChild(option);
+        });
+        
+        if (editId) {
+            // Edit mode
+            const teacher = appState.teachers.find(t => t.id === editId);
+            if (teacher) {
+                document.getElementById('modal-teacher-name').value = teacher.name;
+                
+                // Set selected subjects
+                if (teacher.subjects) {
+                    Array.from(subjectsSelect.options).forEach(option => {
+                        option.selected = teacher.subjects.includes(option.value);
+                    });
+                }
+                
+                // Set selected class levels
+                const levelsSelect = document.getElementById('modal-teacher-levels');
+                if (teacher.class_levels) {
+                    Array.from(levelsSelect.options).forEach(option => {
+                        option.selected = teacher.class_levels.includes(option.value);
+                    });
+                }
+                
+                document.getElementById('save-teacher').setAttribute('data-edit-id', editId);
+            }
+        } else {
+            // Add mode
+            document.getElementById('modal-teacher-name').value = '';
+            Array.from(subjectsSelect.options).forEach(option => {
+                option.selected = false;
+            });
+            const levelsSelect = document.getElementById('modal-teacher-levels');
+            Array.from(levelsSelect.options).forEach(option => {
+                option.selected = false;
+            });
+            document.getElementById('save-teacher').removeAttribute('data-edit-id');
+        }
+        
+        modal.style.display = 'flex';
+    }
+
+    function hideTeacherModal() {
+        document.getElementById('teacher-modal').style.display = 'none';
+    }
+
+    function saveTeacher() {
+        const name = document.getElementById('modal-teacher-name').value;
+        const subjectsSelect = document.getElementById('modal-teacher-subjects');
+        const levelsSelect = document.getElementById('modal-teacher-levels');
+        
+        const selectedSubjects = Array.from(subjectsSelect.selectedOptions).map(option => option.value);
+        const selectedLevels = Array.from(levelsSelect.selectedOptions).map(option => option.value);
+        const editId = document.getElementById('save-teacher').getAttribute('data-edit-id');
+        
+        if (name && selectedSubjects.length > 0 && selectedLevels.length > 0) {
+            if (editId) {
+                // Update existing teacher
+                const teacherIndex = appState.teachers.findIndex(t => t.id === editId);
+                if (teacherIndex !== -1) {
+                    appState.teachers[teacherIndex] = {
+                        ...appState.teachers[teacherIndex],
+                        name,
+                        subjects: selectedSubjects,
+                        class_levels: selectedLevels
+                    };
+                }
+            } else {
+                // Create new teacher
+                const newTeacher = {
+                    id: Date.now().toString(),
+                    name,
+                    subjects: selectedSubjects,
+                    class_levels: selectedLevels,
+                    availability: {},
+                    preferences: {},
+                    created_at: new Date().toISOString()
+                };
+                appState.teachers.push(newTeacher);
+            }
+            
+            updateTeachersList();
+            saveAppData();
+            hideTeacherModal();
+            updateDashboardStats();
+        } else {
+            alert('Please fill in all required fields and select at least one subject and class level');
+        }
+    }
+
+    function updateTeachersList() {
+        const teachersList = document.getElementById('teachers-list');
+        teachersList.innerHTML = '';
+
+        appState.teachers.forEach(teacher => {
+            // Get subject names
+            const subjectNames = teacher.subjects ? teacher.subjects.map(subjectId => {
+                const subject = appState.subjects.find(s => s.id === subjectId);
+                return subject ? subject.name : 'Unknown';
+            }).join(', ') : '';
+            
+            // Get class levels
+            const classLevels = teacher.class_levels ? teacher.class_levels.join(', ') : '';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${teacher.name}</td>
+                <td>${subjectNames}</td>
+                <td>${classLevels}</td>
+                <td>${teacher.availability ? 'Custom' : 'All periods'}</td>
+                <td>
+                    <button class="btn" onclick="showTeacherModal('${teacher.id}')">Edit</button>
+                    <button class="btn btn-warning" onclick="deleteTeacher('${teacher.id}')">Delete</button>
+                </td>
+            `;
+            teachersList.appendChild(row);
+        });
+
+        updateDashboardStats();
+    }
+
+    function deleteTeacher(id) {
+        if (confirm('Are you sure you want to delete this teacher?')) {
+            appState.teachers = appState.teachers.filter(t => t.id !== id);
+            updateTeachersList();
+            saveAppData();
+            updateDashboardStats();
+        }
+    }
+
+    // Constraints management
+    function updateConstraintsForm() {
+        document.getElementById('max-daily-lessons').value = appState.constraints.maxDailyLessons || 6;
+        document.getElementById('max-weekly-lessons').value = appState.constraints.maxWeeklyLessons || 25;
+        document.getElementById('prefer-morning').checked = appState.constraints.preferMorning !== false;
+        document.getElementById('balance-workload').checked = appState.constraints.balanceWorkload !== false;
+    }
+
+    function saveConstraints() {
+        appState.constraints = {
+            maxDailyLessons: parseInt(document.getElementById('max-daily-lessons').value),
+            maxWeeklyLessons: parseInt(document.getElementById('max-weekly-lessons').value),
+            preferMorning: document.getElementById('prefer-morning').checked,
+            balanceWorkload: document.getElementById('balance-workload').checked
+        };
+
+        saveAppData();
+        alert('Constraints saved successfully!');
+    }
+
+    // Timetable generation
+    function generateTimetable() {
+        // This would implement the timetable generation algorithm
+        // For now, we'll create a mock timetable
+
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const timetableContainer = document.getElementById('timetable-container');
+
+        let html = '<div class="timetable">';
+
+        // Header row
+        html += '<div class="timetable-header">Period</div>';
+        days.forEach(day => {
+            html += `<div class="timetable-header">${day}</div>`;
+        });
+
+        // Period rows
+        appState.periods.forEach(period => {
+            html += `<div class="timetable-cell period-cell">${period.name}<br>${period.start_time || period.start} - ${period.end_time || period.end}</div>`;
+
+            days.forEach(day => {
+                if (period.type === 'break' || period.type === 'lunch') {
+                    html += `<div class="timetable-cell break-cell">${period.type === 'break' ? 'Break' : 'Lunch'}</div>`;
+                } else {
+                    // Mock lesson data
+                    const subjects = ['Math', 'English', 'Science', 'History', 'Geography'];
+                    const teachers = ['Mr. Smith', 'Ms. Johnson', 'Dr. Brown'];
+                    const classes = ['S.1 North', 'S.2 East', 'S.3 West'];
+
+                    const subject = subjects[Math.floor(Math.random() * subjects.length)];
+                    const teacher = teachers[Math.floor(Math.random() * teachers.length)];
+                    const cls = classes[Math.floor(Math.random() * classes.length)];
+
+                    html += `
+                        <div class="timetable-cell">
+                            <div class="lesson">
+                                <strong>${subject}</strong><br>
+                                ${teacher}<br>
+                                ${cls}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        });
+
+        html += '</div>';
+        timetableContainer.innerHTML = html;
+
+        // Add click events to lessons for editing
+        document.querySelectorAll('.lesson').forEach(lesson => {
+            lesson.addEventListener('click', function () {
+                showLessonEditModal(this);
+            });
+        });
+    }
+
+    function showLessonEditModal(lessonElement) {
+        // Implementation for lesson editing modal
+        alert('Lesson edit modal would open here');
+    }
+
+    function saveTimetable() {
+        // Implementation for saving timetable
+        alert('Timetable saved successfully!');
+    }
+
+    // Export functionality
+    function toggleExportSelection() {
+        const exportType = document.getElementById('export-type').value;
+        const exportSelection = document.getElementById('export-selection');
+
+        if (exportType === 'selected') {
+            exportSelection.style.display = 'block';
+            populateExportOptions();
+        } else {
+            exportSelection.style.display = 'none';
+        }
+    }
+
+    function populateExportOptions() {
+        const exportOptions = document.getElementById('export-options');
+        exportOptions.innerHTML = '';
+
+        // Add teachers
+        appState.teachers.forEach(teacher => {
+            const div = document.createElement('div');
+            div.innerHTML = `<input type="checkbox" id="teacher-${teacher.id}" value="${teacher.id}"> <label for="teacher-${teacher.id}">${teacher.name}</label>`;
+            exportOptions.appendChild(div);
+        });
+
+        // Add classes
+        appState.classes.forEach(cls => {
+            const div = document.createElement('div');
+            div.innerHTML = `<input type="checkbox" id="class-${cls.id}" value="${cls.id}"> <label for="class-${cls.id}">${cls.level} ${cls.stream}</label>`;
+            exportOptions.appendChild(div);
+        });
+    }
+
+    function exportTimetables() {
+        const format = document.getElementById('export-format').value;
+        const type = document.getElementById('export-type').value;
+
+        // Implementation for exporting timetables
+        alert(`Exporting ${type} timetables in ${format} format`);
+
+        // Add to export history
+        addExportHistory(type, format);
+    }
+
+    function addExportHistory(type, format) {
+        const historyTable = document.querySelector('#export-history tbody');
+        const now = new Date();
+        const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${dateStr}</td>
+            <td>${type}</td>
+            <td>${format}</td>
+            <td><a href="#">Download</a></td>
+        `;
+
+        historyTable.appendChild(row);
+    }
+</script>
+</body>
+
+</html>
