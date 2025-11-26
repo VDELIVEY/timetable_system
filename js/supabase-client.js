@@ -142,52 +142,99 @@ const DataManager = {
         }
     },
 
-    // Individual save functions - REMOVE ID FIELD TO LET SUPABASE GENERATE IT
+    // Individual save functions - FIXED to handle schema properly
     async savePeriods(periods) {
-        // Remove id field to let Supabase generate UUID
-        const periodsWithoutId = periods.map(({ id, ...period }) => period);
-        
+        // Remove id field and ensure proper column names
+        const periodsToSave = periods.map(period => {
+            const { id, ...periodData } = period;
+            // Ensure we're using the correct column names
+            return {
+                name: periodData.name,
+                start_time: periodData.start_time,
+                end_time: periodData.end_time,
+                type: periodData.type,
+                created_at: periodData.created_at || new Date().toISOString()
+            };
+        });
+
         const { error } = await supabase
             .from(DB_SCHEMA.periods)
-            .upsert(periodsWithoutId);
+            .upsert(periodsToSave);
         if (error) throw error;
     },
 
     async saveSubjects(subjects) {
-        // Remove id field to let Supabase generate UUID
-        const subjectsWithoutId = subjects.map(({ id, ...subject }) => subject);
-        
+        // Remove id field and ensure proper column names
+        const subjectsToSave = subjects.map(subject => {
+            const { id, ...subjectData } = subject;
+            return {
+                name: subjectData.name,
+                code: subjectData.code || null,
+                target_lessons_per_week: subjectData.target_lessons_per_week || 5,
+                priority: subjectData.priority || 'medium',
+                created_at: subjectData.created_at || new Date().toISOString()
+            };
+        });
+
         const { error } = await supabase
             .from(DB_SCHEMA.subjects)
-            .upsert(subjectsWithoutId);
+            .upsert(subjectsToSave);
         if (error) throw error;
     },
 
     async saveClasses(classes) {
-        // Remove id field to let Supabase generate UUID
-        const classesWithoutId = classes.map(({ id, ...cls }) => cls);
-        
+        // Remove id field and ensure proper column names
+        const classesToSave = classes.map(cls => {
+            const { id, ...classData } = cls;
+            return {
+                level: classData.level,
+                stream: classData.stream,
+                student_count: classData.student_count || null,
+                created_at: classData.created_at || new Date().toISOString()
+            };
+        });
+
         const { error } = await supabase
             .from(DB_SCHEMA.classes)
-            .upsert(classesWithoutId);
+            .upsert(classesToSave);
         if (error) throw error;
     },
 
     async saveTeachers(teachers) {
-        // Remove id field to let Supabase generate UUID
-        const teachersWithoutId = teachers.map(({ id, ...teacher }) => teacher);
-        
+        // Remove id field and ensure proper column names
+        const teachersToSave = teachers.map(teacher => {
+            const { id, ...teacherData } = teacher;
+            return {
+                name: teacherData.name,
+                subjects: teacherData.subjects || [],
+                class_levels: teacherData.class_levels || [],
+                availability: teacherData.availability || {},
+                preferences: teacherData.preferences || {},
+                created_at: teacherData.created_at || new Date().toISOString()
+            };
+        });
+
         const { error } = await supabase
             .from(DB_SCHEMA.teachers)
-            .upsert(teachersWithoutId);
+            .upsert(teachersToSave);
         if (error) throw error;
     },
 
     async saveConstraints(constraints) {
-        // For constraints, we need to keep the structure but ensure proper format
-        const constraintsToSave = { ...constraints };
-        delete constraintsToSave.id; // Remove id if present
-        
+        // For constraints, we need to ensure proper column names
+        const constraintsToSave = {
+            max_daily_lessons: constraints.max_daily_lessons || 6,
+            max_weekly_lessons: constraints.max_weekly_lessons || 25,
+            prefer_morning: constraints.prefer_morning !== false,
+            balance_workload: constraints.balance_workload !== false,
+            min_lessons_per_subject: constraints.min_lessons_per_subject || 3,
+            max_lessons_per_subject: constraints.max_lessons_per_subject || 10,
+            created_at: constraints.created_at || new Date().toISOString()
+        };
+
+        // Remove id if present
+        delete constraintsToSave.id;
+
         const { error } = await supabase
             .from(DB_SCHEMA.constraints)
             .upsert(constraintsToSave);
@@ -197,21 +244,36 @@ const DataManager = {
     async saveTimetable(timetable) {
         // Convert timetable object to array
         const entries = [];
-        Object.keys(timetable).forEach(day => {
-            Object.keys(timetable[day]).forEach(periodId => {
-                Object.keys(timetable[day][periodId]).forEach(classId => {
-                    const entry = timetable[day][periodId][classId];
-                    // Remove id field to let Supabase generate UUID
-                    const { id, ...entryWithoutId } = entry;
-                    entries.push(entryWithoutId);
+        
+        // Check if timetable is properly structured
+        if (timetable && typeof timetable === 'object') {
+            Object.keys(timetable).forEach(day => {
+                Object.keys(timetable[day]).forEach(periodId => {
+                    Object.keys(timetable[day][periodId]).forEach(classId => {
+                        const entry = timetable[day][periodId][classId];
+                        // Remove id field and ensure proper structure
+                        const { id, ...entryData } = entry;
+                        entries.push({
+                            day: entryData.day,
+                            period_id: entryData.period_id,
+                            class_id: entryData.class_id,
+                            subject_id: entryData.subject_id,
+                            teacher_id: entryData.teacher_id,
+                            room_id: entryData.room_id || null,
+                            is_break: entryData.is_break || false,
+                            created_at: entryData.created_at || new Date().toISOString()
+                        });
+                    });
                 });
             });
-        });
+        }
 
-        const { error } = await supabase
-            .from(DB_SCHEMA.timetable)
-            .upsert(entries);
-        if (error) throw error;
+        if (entries.length > 0) {
+            const { error } = await supabase
+                .from(DB_SCHEMA.timetable)
+                .upsert(entries);
+            if (error) throw error;
+        }
     },
 
     // Default data structure
