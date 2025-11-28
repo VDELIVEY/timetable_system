@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Timetable Generator</title>
+    
+    <!-- Include SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Include Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fb;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 1.5rem;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        nav ul li a:hover,
+        nav ul li a.active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        main {
+            padding: 2rem 0;
+            min-height: calc(100vh - 140px);
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .timetable {
+            display: grid;
+            grid-template-columns: 100px repeat(5, 1fr);
+            gap: 1px;
+            background-color: #dee2e6;
+            border: 1px solid #dee2e6;
+        }
+
+        .timetable-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .timetable-cell {
+            background-color: white;
+            padding: 0.75rem;
+            min-height: 80px;
+        }
+
+        .period-cell {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .break-cell {
+            background-color: #ffeaa7;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .lesson {
+            background-color: #e3f2fd;
+            border-left: 4px solid var(--primary);
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .lesson:hover {
+            background-color: #bbdefb;
+            cursor: pointer;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background-color: #d1f2eb;
+            color: #0e6251;
+            border-left: 4px solid #28b463;
+        }
+
+        .alert-warning {
+            background-color: #fdebd0;
+            color: #7e5109;
+            border-left: 4px solid #f39c12;
+        }
+
+        .alert-error {
+            background-color: #fadbd8;
+            color: #78281f;
+            border-left: 4px solid #e74c3c;
+        }
+
+        footer {
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 0;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: var(--gray);
+        }
+
+        .backup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .backup-time {
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+
+        .generation-progress {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            text-align: center;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            height: 20px;
+            background: var(--success);
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            nav ul {
+                margin-top: 1rem;
+                justify-content: center;
+            }
+
+            nav ul li {
+                margin: 0 0.5rem;
+            }
+
+            .timetable {
+                grid-template-columns: 60px repeat(5, 1fr);
+            }
+
+            .timetable-cell {
+                padding: 0.5rem;
+                min-height: 60px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">Timetable Generator</div>
+                <nav>
+                    <ul>
+                        <li><a href="#" class="nav-link active" data-page="dashboard">Dashboard</a></li>
+                        <li><a href="#" class="nav-link" data-page="setup">Setup</a></li>
+                        <li><a href="#" class="nav-link" data-page="timetable">Timetable</a></li>
+                        <li><a href="#" class="nav-link" data-page="export">Export</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- Dashboard Page -->
+            <div id="dashboard" class="page active">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Dashboard</h2>
+                        <div>
+                            <button class="btn" id="undo-btn">Undo</button>
+                            <button class="btn" id="redo-btn">Redo</button>
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="teachers-count">0</div>
+                            <div class="stat-label">Teachers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="subjects-count">0</div>
+                            <div class="stat-label">Subjects</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="classes-count">0</div>
+                            <div class="stat-label">Classes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="periods-count">0</div>
+                            <div class="stat-label">Periods</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Quick Actions</h2>
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn" id="generate-timetable">Generate Timetable</button>
+                        <button class="btn btn-success" id="export-all">Export All</button>
+                        <button class="btn" id="import-btn">Import Data</button>
+                        <button class="btn" id="export-data-btn">Export Data</button>
+                        <button class="btn" id="backup-btn">Backup Manager</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Activity</h2>
+                    </div>
+                    <div id="recent-activity">
+                        <p>No recent activity. Start by setting up your school data.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Page -->
+            <div id="setup" class="page">
+                <div class="tabs">
+                    <div class="tab active" data-tab="periods">Periods</div>
+                    <div class="tab" data-tab="subjects">Subjects</div>
+                    <div class="tab" data-tab="classes">Classes</div>
+                    <div class="tab" data-tab="teachers">Teachers</div>
+                    <div class="tab" data-tab="constraints">Constraints</div>
+                </div>
+
+                <!-- Periods Tab -->
+                <div id="periods-tab" class="tab-content active">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">School Periods</h2>
+                            <button class="btn" id="add-period">Add Period</button>
+                        </div>
+                        <table id="periods-table">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="periods-list">
+                                <!-- Periods will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Subjects Tab -->
+                <div id="subjects-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Subjects</h2>
+                            <button class="btn" id="add-subject-btn">Add Subject</button>
+                        </div>
+                        <table id="subjects-table">
+                            <thead>
+                                <tr>
+                                    <th>Subject Name</th>
+                                    <th>Code</th>
+                                    <th>Priority</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subjects-list">
+                                <!-- Subjects will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Classes Tab -->
+                <div id="classes-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Classes & Streams</h2>
+                            <button class="btn" id="add-class-btn">Add Class</button>
+                        </div>
+                        <table id="classes-table">
+                            <thead>
+                                <tr>
+                                    <th>Class Level</th>
+                                    <th>Stream Name</th>
+                                    <th>Number of Students</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classes-list">
+                                <!-- Classes will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Teachers Tab -->
+                <div id="teachers-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Teachers</h2>
+                            <button class="btn" id="add-teacher-btn">Add Teacher</button>
+                        </div>
+                        <table id="teachers-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Subjects</th>
+                                    <th>Classes</th>
+                                    <th>Availability</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teachers-list">
+                                <!-- Teachers will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Constraints Tab -->
+                <div id="constraints-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Constraints & Preferences</h2>
+                        </div>
+                        <div class="form-group">
+                            <label for="max-daily-lessons">Maximum Daily Lessons per Teacher</label>
+                            <input type="number" id="max-daily-lessons" value="6" min="1" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="max-weekly-lessons">Maximum Weekly Lessons per Teacher</label>
+                            <input type="number" id="max-weekly-lessons" value="25" min="10" max="40">
+                        </div>
+                        <div class="form-group">
+                            <label for="prefer-morning">Prefer Morning Periods for Core Subjects</label>
+                            <input type="checkbox" id="prefer-morning" checked>
+                        </div>
+                        <div class="form-group">
+                            <label for="balance-workload">Balance Teacher Workload</label>
+                            <input type="checkbox" id="balance-workload" checked>
+                        </div>
+                        <button class="btn" id="save-constraints">Save Constraints</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timetable Page -->
+            <div id="timetable" class="page">
+                <div class="generation-progress" id="generation-progress" style="display: none;">
+                    <div>Generating timetable...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div id="progress-percentage">0%</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Timetable</h2>
+                        <div>
+                            <select id="timetable-view">
+                                <option value="class">Class View</option>
+                                <option value="teacher">Teacher View</option>
+                            </select>
+                            <select id="timetable-entity">
+                                <option value="all">All</option>
+                            </select>
+                            <button class="btn" id="generate-btn">Generate</button>
+                            <button class="btn btn-success" id="save-timetable">Save</button>
+                        </div>
+                    </div>
+
+                    <div id="timetable-container">
+                        <div class="alert alert-warning">
+                            No timetable generated yet. Click "Generate" to create one.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Manual Edit</h2>
+                    </div>
+                    <div id="edit-controls">
+                        <p>Select a lesson in the timetable to edit it.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Page -->
+            <div id="export" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Export Timetables</h2>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-format">Export Format</label>
+                        <select id="export-format">
+                            <option value="excel">Excel (.xlsx)</option>
+                            <option value="word">Word (.doc)</option>
+                            <option value="pdf">PDF (Print)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-type">Export For</label>
+                        <select id="export-type">
+                            <option value="teachers">All Teachers</option>
+                            <option value="classes">All Classes</option>
+                            <option value="streams">All Streams</option>
+                            <option value="selected">Selected Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="export-selection" style="display: none;">
+                        <label>Select Items to Export</label>
+                        <div id="export-options">
+                            <!-- Options will be populated here -->
+                        </div>
+                    </div>
+                    <button class="btn btn-success" id="export-btn">Export</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Export History</h2>
+                    </div>
+                    <table id="export-history">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Format</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" style="text-align: center;">No export history yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; School Timetable Generator. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div id="period-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px;">
+            <h3>Add/Edit Period</h3>
+            <div class="form-group">
+                <label for="modal-period-name">Period Name</label>
+                <input type="text" id="modal-period-name">
+            </div>
+            <div class="form-group">
+                <label for="modal-period-start">Start Time</label>
+                <input type="time" id="modal-period-start">
+            </div>
+            <div class="form-group">
+                <label for="modal-period-end">End Time</label>
+                <input type="time" id="modal-period-end">
+            </div>
+            <div class="form-group">
+                <label for="modal-period-type">Period Type</label>
+                <select id="modal-period-type">
+                    <option value="lesson">Lesson</option>
+                    <option value="break">Break</option>
+                    <option value="lunch">Lunch</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-period">Cancel</button>
+                <button class="btn btn-success" id="save-period">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subject Modal -->
+    <div id="subject-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px;">
+            <h3>Add/Edit Subject</h3>
+            <div class="form-group">
+                <label for="modal-subject-name">Subject Name</label>
+                <input type="text" id="modal-subject-name">
+            </div>
+            <div class="form-group">
+                <label for="modal-subject-code">Subject Code</label>
+                <input type="text" id="modal-subject-code">
+            </div>
+            <div class="form-group">
+                <label for="modal-subject-lessons">Target Lessons per Week</label>
+                <input type="number" id="modal-subject-lessons" value="5" min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label for="modal-subject-priority">Priority</label>
+                <select id="modal-subject-priority">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-subject">Cancel</button>
+                <button class="btn btn-success" id="save-subject">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Modal -->
+    <div id="class-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px;">
+            <h3>Add/Edit Class</h3>
+            <div class="form-group">
+                <label for="modal-class-level">Class Level</label>
+                <input type="text" id="modal-class-level" placeholder="e.g., S.1, S.2, S.3">
+            </div>
+            <div class="form-group">
+                <label for="modal-class-stream">Stream Name</label>
+                <input type="text" id="modal-class-stream" placeholder="e.g., North, South, East, West">
+            </div>
+            <div class="form-group">
+                <label for="modal-class-students">Number of Students</label>
+                <input type="number" id="modal-class-students" min="1" max="100">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-class">Cancel</button>
+                <button class="btn btn-success" id="save-class">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Modal -->
+    <div id="teacher-modal" class="modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px;">
+            <h3>Add/Edit Teacher</h3>
+            <div class="form-group">
+                <label for="modal-teacher-name">Teacher Name</label>
+                <input type="text" id="modal-teacher-name">
+            </div>
+            <div class="form-group">
+                <label for="modal-teacher-subjects">Subjects (select multiple)</label>
+                <select id="modal-teacher-subjects" multiple style="height: 120px;">
+                    <!-- Subjects will be populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="modal-teacher-levels">Class Levels (select multiple)</label>
+                <select id="modal-teacher-levels" multiple style="height: 100px;">
+                    <option value="S.1">S.1</option>
+                    <option value="S.2">S.2</option>
+                    <option value="S.3">S.3</option>
+                    <option value="S.4">S.4</option>
+                    <option value="S.5">S.5</option>
+                    <option value="S.6">S.6</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="cancel-teacher">Cancel</button>
+                <button class="btn btn-success" id="save-teacher">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="js/supabase-client.js"></script>
+    <script type="module" src="js/error-handler.js"></script>
+    <script type="module" src="js/timetable.js"></script>
+    <script type="module" src="js/constraints.js"></script>
+    <script type="module" src="js/export.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
